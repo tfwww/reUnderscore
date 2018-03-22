@@ -105,4 +105,63 @@ var cb = function (value, context, argCount) {
 };
 ```
 
-#### 不定参数
+#### underscore 中的创建对象
+
+``` javascript
+// 先用变量接住 create 方法，方便调用
+var nativeCreate = Object.create;
+// 空的构造函数
+var Ctor = function () {};
+/**
+ * 创建一个对象，该对象继承自prototype
+ * 并且保证该对象在其原型上挂载属性不会影响所继承的prototype
+ * @param {object} prototype
+ */
+var baseCreate = function (prototype) {
+    if (!_.isObject(prototype)) return {};
+    // 如果存在原生的创建方法（Object.create），则用原生的进行创建
+    if (nativeCreate) return nativeCreate(prototype);
+    // 利用Ctor这个空函数，临时设置对象原型
+    Ctor.prototype = prototype;
+    // 创建对象，result.__proto__ === prototype
+    var result = new Ctor;
+    // 还原Ctor原型
+    Ctor.prototype = null;
+    return result;
+};
+```
+
+#### 数组和对象的迭代
+``` javascript
+_.each = _.forEach = function (obj, iteratee, context) {
+    iteratee = optimizeCb(iteratee, context);
+    var i, length;
+    if (isArrayLike(obj)) {
+        for (i = 0, length = obj.length; i < length; i++) {
+            iteratee(obj[i], i, obj);
+        }
+    } else {
+        var keys = _.keys(obj);
+        for (i = 0, length = keys.length; i < length; i++) {
+            iteratee(obj[keys[i]], keys[i], obj);
+        }
+    }
+    return obj;
+};
+```
+
+#### map 在 underscore 中的实现
+
+``` javascript
+ _.map = _.collect = function (obj, iteratee, context) {
+    iteratee = cb(iteratee, context);
+    var keys = !isArrayLike(obj) && _.keys(obj),
+        length = (keys || obj).length,
+        results = Array(length);
+    for (var index = 0; index < length; index++) {
+        var currentKey = keys ? keys[index] : index;
+        results[index] = iteratee(obj[currentKey], currentKey, obj);
+    }
+    return results;
+};
+````
